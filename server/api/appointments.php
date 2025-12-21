@@ -1,4 +1,4 @@
-<?php
+<?php session_start();
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
@@ -12,6 +12,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once '../../common/db.php';
 
 try {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!isset($input['registration_id']) || !isset($input['status'])) {
+            throw new Exception("Missing registration_id or status");
+        }
+
+        $regId = $input['registration_id'];
+        $status = $input['status'];
+        
+        // Validate status if needed, or allow flexible string
+        $stmt = $pdo->prepare("UPDATE registration SET status = :status WHERE registration_id = :id");
+        $stmt->execute(['status' => $status, 'id' => $regId]);
+
+        echo json_encode(["status" => "success", "message" => "Status updated to $status"]);
+        exit;
+    }
+
+    // GET Request Logic (Existing)
     // Determine Start (Sunday) and End (Saturday) of current week
     // If today is Sunday, 'last sunday' might jump back a week depending on logic, so be careful.
     // 'sunday this week' works in PHP 5.3+ ?
@@ -28,7 +47,21 @@ try {
     $startDate = $startOfWeek->format('Y-m-d');
     $endDate = $endOfWeek->format('Y-m-d');
 
-    $branchId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : 1; 
+    // STRICT BRANCH ISOLATION
+    $employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
+    $branchId = 0;
+    if ($employeeId) {
+        $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+        $stmtB->execute([$employeeId]);
+        $val = $stmtB->fetchColumn();
+        if ($val) $branchId = $val;
+    }
+    if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+        http_response_code(401);
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized: Branch ID required.']);
+        exit;
+    } 
 
     $stmt = $pdo->prepare("
         SELECT 

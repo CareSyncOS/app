@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+session_start();
 
 // ----------------------------------------------------------------------
 // API: List Patients for Attendance + Balance Info
@@ -48,14 +49,28 @@ try {
     // ------------------------------------------------------------------
     // 2. Input Parameters
     // ------------------------------------------------------------------
-    $branchId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : null;
-    $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-    $statusFilter = isset($_GET['status']) ? trim($_GET['status']) : 'all'; // 'all', 'present', 'absent'
-    $date = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d'); // Default to Today
+// STRICT BRANCH ISOLATION
+$employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
+$branchId = 0;
+if ($employeeId) {
+    try {
+        $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+        $stmtB->execute([$employeeId]);
+        $val = $stmtB->fetchColumn();
+        if ($val) $branchId = $val;
+    } catch(Exception $e){}
+}
+if (!$branchId && isset($_SESSION['branch_id'])) $branchId = $_SESSION['branch_id'];
 
-    if (!$branchId) {
-        throw new Exception("Branch ID is required");
-    }
+if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+    http_response_code(401);
+    throw new Exception("Unauthorized: Branch ID required from valid Employee.");
+}
+
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$statusFilter = isset($_GET['status']) ? trim($_GET['status']) : 'all'; 
+$date = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
 
     // Pagination
     $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
@@ -113,7 +128,8 @@ try {
     $statsSql = "
         SELECT
             COUNT(*) as total_active,
-            SUM(CASE WHEN a.attendance_id IS NOT NULL THEN 1 ELSE 0 END) as present,
+            SUM(CASE WHEN a.attendance_id IS NOT NULL AND a.status = 'present' THEN 1 ELSE 0 END) as present,
+            SUM(CASE WHEN a.attendance_id IS NOT NULL AND a.status = 'pending' THEN 1 ELSE 0 END) as pending,
             SUM(CASE WHEN a.attendance_id IS NULL THEN 1 ELSE 0 END) as absent
         FROM patients p
         LEFT JOIN attendance a ON p.patient_id = a.patient_id AND a.attendance_date = :att_date
@@ -142,11 +158,12 @@ try {
             pm.patient_uid,
             a.attendance_id,
             a.attendance_date AS attended_date,
+            a.status AS attendance_status,
             a.remarks AS attendance_remarks
         $baseQuery
         WHERE $whereSql
         ORDER BY
-            (a.attendance_id IS NOT NULL) DESC, -- Show present first? Or Absent first? Web does `(a.attendance_id IS NOT NULL) DESC` (Present first)
+            (a.attendance_id IS NOT NULL) DESC, -- Show present first
             r.patient_name ASC
         LIMIT :limit OFFSET :offset
     ";

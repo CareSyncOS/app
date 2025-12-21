@@ -25,6 +25,13 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    proxy: {
+      '/admin': {
+        target: 'http://localhost',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 
   // Env prefix for exposing env variables to client

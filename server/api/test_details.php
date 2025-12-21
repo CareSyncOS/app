@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+session_start();
 
 // ----------------------------------------------------------------------
 // API: Test Details
@@ -25,9 +26,29 @@ try {
         throw new Exception("Invalid Test ID");
     }
 
+    // STRICT BRANCH ISOLATION
+    $employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
+    $branchId = 0;
+    if ($employeeId) {
+        try {
+            $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+            $stmtB->execute([$employeeId]);
+            $val = $stmtB->fetchColumn();
+            if ($val) $branchId = $val;
+        } catch(Exception $e){}
+    }
+    if (!$branchId && isset($_SESSION['branch_id'])) $branchId = $_SESSION['branch_id'];
+
+    if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+        http_response_code(401);
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized: Branch ID mismatch or missing.']);
+        exit;
+    }
+
     // 1. Fetch Header
-    $stmt = $pdo->prepare("SELECT * FROM tests WHERE test_id = ?");
-    $stmt->execute([$testId]);
+    $stmt = $pdo->prepare("SELECT * FROM tests WHERE test_id = ? AND branch_id = ?");
+    $stmt->execute([$testId, $branchId]);
     $header = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$header) {

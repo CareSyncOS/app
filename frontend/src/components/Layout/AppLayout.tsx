@@ -1,10 +1,11 @@
-import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import BottomNav from './BottomNav';
 import { useTheme } from '../../hooks';
 
 export const AppLayout = () => {
   const { isAuthenticated } = useAuthStore();
+  const location = useLocation();
   useTheme(); // Initialize theme
 
   if (!isAuthenticated) {
@@ -16,7 +17,7 @@ export const AppLayout = () => {
       <div className="flex-1 overflow-y-auto relative scroller pb-safe">
         <Outlet />
       </div>
-      <BottomNav />
+      {!location.pathname.startsWith('/chat/') && <BottomNav />}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/useAuthStore';
 import { 
     UserPlus, 
     ClipboardList, 
@@ -8,128 +9,194 @@ import {
     Wallet, 
     BarChart3, 
     TestTube2, 
-    Headphones
+    Headphones,
+    MessageSquare,
+    Info,
+    ChevronRight,
+    LayoutGrid,
+    LogOut
 } from 'lucide-react';
 
 const MenuScreen: React.FC = () => {
     const navigate = useNavigate();
+    const { user, logout } = useAuthStore();
+
+    const handleLogout = () => {
+        if (window.confirm('Are you sure you want to logout?')) {
+            logout();
+            navigate('/login');
+        }
+    };
 
     const menuItems = [
         { 
             id: 'inquiry', 
             label: 'Inquiry', 
             desc: 'Manage leads & requests',
-            icon: <ClipboardList size={24} />, 
-            color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
+            icon: <ClipboardList size={22} />, 
+            color: 'from-blue-500 to-blue-600',
+            bg: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
             link: '/inquiry'
         },
         { 
             id: 'registration', 
             label: 'Registration', 
             desc: 'Add new patient',
-            icon: <UserPlus size={24} />, 
-            color: 'bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400',
+            icon: <UserPlus size={22} />, 
+            color: 'from-teal-500 to-teal-600',
+            bg: 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
             link: '/registration'
         },
         { 
             id: 'attendance', 
             label: 'Attendance', 
             desc: 'Mark daily visits',
-            icon: <QrCode size={24} />, 
-            color: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
+            icon: <QrCode size={22} />, 
+            color: 'from-purple-500 to-purple-600',
+            bg: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
             link: '/attendance'
         },
         { 
             id: 'billing', 
             label: 'Billing', 
             desc: 'Invoices & payments',
-            icon: <Receipt size={24} />, 
-            color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400',
+            icon: <Receipt size={22} />, 
+            color: 'from-indigo-500 to-indigo-600',
+            bg: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
             link: '/billing'
         },
         { 
             id: 'tests', 
             label: 'Tests', 
             desc: 'Lab tests management',
-            icon: <TestTube2 size={24} />, 
-            color: 'bg-pink-50 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400',
+            icon: <TestTube2 size={22} />, 
+            color: 'from-pink-500 to-pink-600',
+            bg: 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400',
             link: '/tests'
         },
         { 
             id: 'reports', 
             label: 'Reports', 
             desc: 'Analytics & stats',
-            icon: <BarChart3 size={24} />, 
-            color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
+            icon: <BarChart3 size={22} />, 
+            color: 'from-orange-500 to-orange-600',
+            bg: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
             link: '/reports'
         },
         { 
             id: 'expenses', 
             label: 'Expenses', 
             desc: 'Track clinic spending',
-            icon: <Wallet size={24} />, 
-            color: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400',
+            icon: <Wallet size={22} />, 
+            color: 'from-red-500 to-red-600',
+            bg: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
             link: '/expenses'
+        },
+        { 
+            id: 'feedback', 
+            label: 'Feedback', 
+            desc: 'Patient reviews',
+            icon: <MessageSquare size={22} />, 
+            color: 'from-lime-500 to-lime-600',
+            bg: 'bg-lime-100 dark:bg-lime-900/30 text-lime-600 dark:text-lime-400',
+            link: '/feedback'
         },
         { 
             id: 'support', 
             label: 'Support', 
             desc: 'Help & documentation',
-            icon: <Headphones size={24} />, 
-            color: 'bg-gray-50 text-gray-600 dark:bg-gray-700/30 dark:text-gray-400',
+            icon: <Headphones size={22} />, 
+            color: 'from-cyan-500 to-cyan-600',
+            bg: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400',
             link: '/support'
         }
     ];
 
-    const handleNavigation = (link: string, label: string) => {
-        if (link === '/inquiry' || link === '/registration' || link === '/attendance' || link === '/billing' || link === '/tests' || link === '/reports' || link === '/expenses' || link === '/support') {
-            navigate(link);
-        } else {
-            navigate('/menu-placeholder', { state: { title: label } });
-        }
-    };
-
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors pb-safe">
-            <div className="bg-white dark:bg-gray-800 px-6 py-4 pt-[var(--safe-area-inset-top,32px)] mt-0 shadow-sm sticky top-0 z-10 transition-colors">
-
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Menu</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">All modules & tools</p>
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors pb-[env(safe-area-inset-bottom)]">
+            {/* Header */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md px-6 py-4 pt-[max(env(safe-area-inset-top),20px)] shadow-sm sticky top-0 z-20 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
+                        <LayoutGrid size={24} className="text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Menu</h1>
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Quick Access</p>
+                    </div>
+                </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 pb-24">
-                <div className="grid grid-cols-2 gap-4">
-                    {menuItems.map((item) => (
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4 pb-24 custom-scrollbar">
+                
+                {/* User Profile Card */}
+                <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-teal-500/30">
+                            {user?.name?.charAt(0) || 'U'}
+                        </div>
+                        <div>
+                            <h2 className="font-black text-gray-900 dark:text-white text-lg leading-tight">{user?.name || 'User'}</h2>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{user?.role || 'Staff'}</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={handleLogout} 
+                        className="p-3 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors active:scale-95"
+                        title="Logout"
+                    >
+                        <LogOut size={20} />
+                    </button>
+                </div>
+
+                {/* 3-Column Compact Grid */}
+                <div className="grid grid-cols-3 gap-3">
+                    {menuItems.map((item, index) => (
                         <button 
                             key={item.id}
-                            onClick={() => handleNavigation(item.link, item.label)}
-                            className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-start text-left hover:shadow-md transition-all active:scale-95"
+                            onClick={() => navigate(item.link)}
+                            className="group relative bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center aspect-square hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                            style={{ animationDelay: `${index * 50}ms` }}
                         >
-                            <div className={`p-3 rounded-xl mb-3 ${item.color}`}>
+                            <div className={`p-3 rounded-2xl mb-2 ${item.bg} group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
                                 {item.icon}
                             </div>
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-1">{item.label}</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{item.desc}</p>
+                            <h3 className="font-bold text-gray-900 dark:text-white text-[11px] leading-tight">{item.label}</h3>
+                            
+                            {/* Hover Gradient Overlay */}
+                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 to-gray-50/50 dark:from-transparent dark:to-gray-700/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                         </button>
                     ))}
                 </div>
 
-                <button 
-                    onClick={() => navigate('/about')}
-                    className="w-full mt-6 p-4 bg-teal-50 dark:bg-teal-900/20 rounded-2xl border border-teal-100 dark:border-teal-800/30 flex items-center justify-between group active:scale-[0.99] transition-all"
-                >
-                    <div className="text-left">
-                        <h3 className="font-bold text-teal-800 dark:text-teal-300">About This App</h3>
-                        <p className="text-xs text-teal-600 dark:text-teal-400 mt-1">Version 1.0.0 & Features</p>
-                    </div>
-                    <div className="px-4 py-2 bg-teal-600 group-hover:bg-teal-700 text-white text-xs font-bold rounded-lg transition-colors">
-                        View
-                    </div>
-                </button>
+                {/* Compact About Section */}
+                <div className="mt-6">
+                    <button 
+                        onClick={() => navigate('/about')}
+                        className="w-full p-1 rounded-2xl bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-500 shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-300 group"
+                    >
+                        <div className="bg-white dark:bg-gray-900 rounded-[14px] px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-teal-50 dark:bg-teal-900/20 rounded-full">
+                                    <Info size={18} className="text-teal-500" />
+                                </div>
+                                <div className="text-left">
+                                    <h3 className="font-bold text-gray-900 dark:text-white text-sm">About App</h3>
+                                    <p className="text-[10px] font-bold text-teal-500 uppercase tracking-widest leading-none">v2.5.0</p>
+                                </div>
+                            </div>
+                            <ChevronRight size={16} className="text-gray-400" />
+                        </div>
+                    </button>
+                </div>
 
-                <div className="mt-8 mb-4 text-center space-y-1">
-                    <p className="text-xs font-bold text-gray-400">v1.0.0</p>
-                    <p className="text-[10px] text-gray-300 dark:text-gray-600">Created by <span className="font-bold text-gray-400 dark:text-gray-500">Sumit Srivastava</span></p>
+                {/* Footer Credits */}
+                <div className="mt-8 mb-6 text-center">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Created by</p>
+                    <p className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                        Sumit Srivastava
+                    </p>
                 </div>
             </div>
         </div>

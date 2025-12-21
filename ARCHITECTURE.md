@@ -21,7 +21,7 @@
 │                                     │
 │  ┌───────────────────────────────┐ │
 │  │   Existing PHP APIs           │ │
-│  │   /OS/reception/api/*         │ │
+│  │   /admin/reception/api/*         │ │
 │  └───────────────────────────────┘ │
 │              ↕                      │
 │  ┌───────────────────────────────┐ │
@@ -77,7 +77,7 @@ prospine-mobile/
 All these APIs are already on your server:
 
 ```
-https://prospine.in/OS/reception/api/
+https://prospine.in/admin/reception/api/
 ├── fetch_patient.php
 ├── add_attendance.php
 ├── add_payment.php

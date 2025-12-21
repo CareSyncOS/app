@@ -1,4 +1,4 @@
-<?php
+<?php session_start();
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET");
@@ -6,7 +6,21 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 require_once '../../common/db.php';
 
-$branchId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : 1;
+// STRICT BRANCH ISOLATION
+$employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
+$branchId = 0;
+if ($employeeId) {
+    $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+    $stmtB->execute([$employeeId]);
+    $val = $stmtB->fetchColumn();
+    if ($val) $branchId = $val;
+}
+if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+    http_response_code(401);
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized: Branch ID mismatch or missing.']);
+    exit;
+}
 $type = isset($_GET['type']) ? $_GET['type'] : 'quick'; // quick, test, online, booked
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 15;

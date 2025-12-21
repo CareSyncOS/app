@@ -1,4 +1,4 @@
-<?php
+<?php session_start();
 // /server/api/dashboard.php
 
 header("Access-Control-Allow-Origin: *");
@@ -14,7 +14,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once '../../common/db.php';
 
 $data = json_decode(file_get_contents("php://input"));
-$branchId = isset($data->branch_id) ? (int)$data->branch_id : 1;
+
+// STRICT BRANCH ISOLATION
+$employeeId = $data->employee_id ?? $data->user_id ?? $_SESSION['employee_id'] ?? null;
+$branchId = 0;
+
+if ($employeeId) {
+    $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+    $stmtB->execute([$employeeId]);
+    $dbBranch = $stmtB->fetchColumn();
+    if ($dbBranch) {
+        $branchId = $dbBranch;
+    }
+}
+
+if (!$branchId && isset($_SESSION['branch_id'])) {
+    $branchId = $_SESSION['branch_id'];
+}
+if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+    http_response_code(401);
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized: Branch ID required.']);
+    exit;
+}
 
 try {
     $pdo->exec("SET time_zone = '+05:30'");

@@ -1,4 +1,4 @@
-<?php
+<?php session_start();
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
@@ -11,7 +11,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-$branchId = $_GET['branch_id'] ?? null;
+// STRICT BRANCH ISOLATION
+$employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
+$branchId = 0;
+if ($employeeId) {
+    try {
+        $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+        $stmtB->execute([$employeeId]);
+        $val = $stmtB->fetchColumn();
+        if ($val) $branchId = $val;
+    } catch (Exception $e) {}
+}
+if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+    http_response_code(401);
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized: Branch ID required.']);
+    exit;
+}
+if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
 if (!$branchId) {
     echo json_encode(['status' => 'error', 'message' => 'Branch ID required']);
     exit();

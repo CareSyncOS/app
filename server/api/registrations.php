@@ -1,4 +1,4 @@
-<?php
+<?php session_start();
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET");
@@ -18,7 +18,25 @@ if (file_exists($dbPath)) {
     }
 }
 
-$branchId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : 1;
+// STRICT BRANCH ISOLATION
+$employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
+$branchId = 0;
+if ($employeeId) {
+    try {
+        $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+        $stmtB->execute([$employeeId]);
+        $val = $stmtB->fetchColumn();
+        if ($val) $branchId = $val;
+    } catch(Exception $e){}
+}
+if (!$branchId && isset($_SESSION['branch_id'])) $branchId = $_SESSION['branch_id'];
+
+if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+    http_response_code(401);
+    echo json_encode(["status" => "error", "message" => "Unauthorized: Branch ID mismatch or missing."]);
+    exit;
+}
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 15;
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';

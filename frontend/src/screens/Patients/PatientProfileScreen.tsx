@@ -1,31 +1,37 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, User, Phone, Mail, MapPin, Activity, CreditCard, Stethoscope, Briefcase, UserPlus, Clock, PenTool, Printer, FlaskConical, IndianRupee } from 'lucide-react';
+import { 
+    ChevronLeft, User, Phone, Mail, MapPin, 
+    Stethoscope, Activity, FileText, Calendar, 
+    CheckCircle, Clock, AlertCircle, 
+    TrendingUp, Wallet, IndianRupee 
+} from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
+// Define API URLs
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
 const ADMIN_URL = 'https://prospine.in/admin';
 
+// Types
 interface PatientDetail {
   basic: {
     patient_id: string;
     patient_uid: string;
     name: string;
-    photo: string;
+    photo: string | null;
     status: string;
     age: number;
     gender: string;
     phone: string;
     email: string;
     address: string;
-    reg_id: string;
-    created_at: string;
-    referral: string;
-    occupation: string;
-    chief_complaint: string;
-    remarks: string;
     assigned_doctor: string;
+    occupation?: string;
+    created_at?: string;
+    referral?: string;
+    chief_complaint?: string;
+    remarks?: string;
   };
   financials: {
     total_billed: number;
@@ -38,311 +44,388 @@ interface PatientDetail {
     days: number;
     start_date: string;
     end_date: string;
-    cost_per_day: number;
-    total_cost: number;
-  };
-  consultation: {
-    type: string;
-    date: string;
-    amount: number;
-    notes: string;
-    prescription: string;
+    cost_per_day?: number;
   };
   attendance: {
     total_present: number;
-    history: Array<{ attendance_date: string; remarks: string }>;
+    history: any[];
   };
 }
 
-const PatientProfileScreen: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [data, setData] = useState<PatientDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'info' | 'treatment' | 'financial'>('info');
+const PatientProfileScreen = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuthStore();
+    
+    const [patient, setPatient] = useState<PatientDetail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('profile');
+    const [isPayModalOpen, setPayModalOpen] = useState(false);
+    
+    // Payment State
+    const [payAmount, setPayAmount] = useState('');
+    const [payMode, setPayMode] = useState('cash');
+    const [paymentProcessing, setPaymentProcessing] = useState(false);
 
-  useEffect(() => {
-    const fetchPatient = async () => {
-      try {
-        const response = await fetch(`${API_URL}/patient_details.php?patient_id=${id}&branch_id=${user?.role === 'admin' ? 1 : 1}`);
-        const json = await response.json();
-        if (json.status === 'success') {
-          setData(json.data);
+    const fetchPatientDetails = async () => {
+        try {
+            const res = await fetch(`${API_URL}/patient_details.php?patient_id=${id}&branch_id=${user?.role === 'admin' ? 1 : 1}`);
+            const json = await res.json();
+            if (json.status === 'success') {
+                setPatient(json.data);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
-      } catch (error) {
-        console.error('Failed to fetch patient details', error);
-      } finally {
-        setLoading(false);
-      }
     };
-    fetchPatient();
-  }, [id]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div>
-      </div>
+    useEffect(() => {
+        fetchPatientDetails();
+    }, [id]);
+
+    const handlePayDues = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPaymentProcessing(true);
+        try {
+            const res = await fetch(`${API_URL}/add_payment.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: id,
+                    amount: parseFloat(payAmount),
+                    mode: payMode,
+                    remarks: 'Mobile App Payment',
+                    employee_id: user?.id || 1
+                })
+            });
+            const json = await res.json();
+            if (json.status === 'success') {
+                setPayModalOpen(false);
+                setPayAmount('');
+                alert('Payment Successful!');
+                fetchPatientDetails(); // Refresh data
+            } else {
+                alert('Payment Failed: ' + json.message);
+            }
+        } catch (err) {
+            alert('Error processing payment');
+        } finally {
+            setPaymentProcessing(false);
+        }
+    };
+
+    if (loading) return (
+        <div className="flex h-full items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
     );
-  }
 
-  if (!data) return <div className="p-4 text-center">Patient not found</div>;
+    if (!patient) return (
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 items-center justify-center">
+            <p className="text-gray-500">Patient not found</p>
+            <button onClick={() => navigate(-1)} className="mt-4 text-teal-600 font-bold">Go Back</button>
+        </div>
+    );
 
-  const { basic, financials, treatment, consultation, attendance } = data;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors pb-safe">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 px-4 py-4 pt-[var(--safe-area-inset-top,32px)] mt-0 shadow-sm sticky top-0 z-10 flex items-center gap-3 transition-colors">
-
-        <button onClick={() => navigate(-1)} className="p-1 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
-          <ChevronLeft size={24} />
+    const { basic, financials, treatment, attendance } = patient;
+    const progressPercent = treatment.days > 0 ? Math.min(100, Math.round((attendance.total_present / treatment.days) * 100)) : 0;
+    
+    // Components helpers
+    const TabButton = ({ active, onClick, label, icon }: any) => (
+        <button 
+            onClick={onClick} 
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-black uppercase tracking-wide rounded-xl transition-all duration-300
+            ${active ? 'bg-white dark:bg-gray-700 text-teal-600 dark:text-teal-400 shadow-sm scale-[1.02]' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'}`}
+        >
+            {icon} {label}
         </button>
-        <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white truncate">{basic.name}</h1>
-            <p className="text-xs text-start text-gray-500 dark:text-gray-400">#{basic.patient_uid}</p>
+    );
+
+    const Section = ({ title, icon, children }: any) => (
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+            <h3 className="text-[11px] font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-2">
+                <span className="text-teal-500">{icon}</span>
+                {title}
+            </h3>
+            <div className="mt-2 text-sm">{children}</div>
         </div>
-      </div>
+    );
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-5 pb-24">
-        
-        {/* Profile Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 relative overflow-hidden transition-colors">
-            <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-teal-500 to-emerald-500 opacity-90"></div>
-            <div className="relative pt-12 flex flex-col items-center text-center">
-                <div className="w-28 h-28 rounded-full bg-white dark:bg-gray-800 p-1.5 shadow-lg mb-3">
-                    <img 
-                        src={basic.photo ? `${ADMIN_URL}/${basic.photo}` : `https://ui-avatars.com/api/?name=${basic.name}&background=0D9488&color=fff`} 
-                        alt={basic.name} 
-                        className="w-full h-full rounded-full object-cover"
-                    />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{basic.name}</h2>
-                <div className="flex items-center gap-2 mt-1">
-                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase border
-                        ${basic.status.toLowerCase() === 'active' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                        {basic.status}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">• {basic.gender}, {basic.age} yrs</span>
-                </div>
-
-                <div className="flex items-center gap-2 mt-3 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-600">
-                    <Stethoscope size={14} className="text-teal-600 dark:text-teal-400" />
-                    <span>Dr. {basic.assigned_doctor}</span>
-                </div>
-
-                <div className="flex gap-4 mt-6 w-full justify-center">
-                    <a href={`tel:${basic.phone}`} className="flex flex-col items-center gap-1 w-16 group">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center group-active:scale-95 transition-transform shadow-sm">
-                            <Phone size={20} />
-                        </div>
-                        <span className="text-[10px] font-medium text-gray-500">Call</span>
-                    </a>
-                    <a href={`sms:${basic.phone}`} className="flex flex-col items-center gap-1 w-16 group">
-                        <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center group-active:scale-95 transition-transform shadow-sm">
-                            <Mail size={20} />
-                        </div>
-                        <span className="text-[10px] font-medium text-gray-500">Message</span>
-                    </a>
-                </div>
+    const InfoItem = ({ icon, label, value, className = '' }: any) => (
+        <div className={`p-3 bg-gray-50 dark:bg-gray-700/30 rounded-2xl ${className}`}>
+            <div className="flex items-center gap-2 mb-1.5">
+                <div className="text-gray-400 dark:text-gray-500">{icon}</div>
+                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase">{label}</p>
             </div>
+            <p className="text-sm font-bold text-gray-900 dark:text-white break-words leading-tight pl-1">{value || 'N/A'}</p>
         </div>
+    );
 
-        {/* Action Grid (Drawer Items) */}
-        <div className="grid grid-cols-4 gap-2">
-            <ActionButton label="Edit Plan" icon={<PenTool size={16} />} color="purple" />
-            <ActionButton label="Bill" icon={<Printer size={16} />} color="gray" />
-            <ActionButton label="Add Test" icon={<FlaskConical size={16} />} color="teal" />
-            <ActionButton label="Pay Dues" icon={<IndianRupee size={16} />} color="indigo" />
-        </div>
-
-        {/* Tabs */}
-        <div className="flex p-1 bg-gray-100 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700/50">
-            <TabButton active={activeTab === 'info'} onClick={() => setActiveTab('info')} label="Data" icon={<User size={14} />} />
-            <TabButton active={activeTab === 'treatment'} onClick={() => setActiveTab('treatment')} label="Plan" icon={<Activity size={14} />} />
-            <TabButton active={activeTab === 'financial'} onClick={() => setActiveTab('financial')} label="Finance" icon={<CreditCard size={14} />} />
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'info' && (
-            <div className="space-y-4 animate-fade-in">
-                <Section title="Demographics">
-                    <div className="grid grid-cols-2 gap-4">
-                         <InfoItem icon={<Briefcase size={14} />} label="Occupation" value={basic.occupation} />
-                         <InfoItem icon={<UserPlus size={14} />} label="Referred By" value={basic.referral} />
-                         <InfoItem icon={<Clock size={14} />} label="Registered" value={formatDate(basic.created_at)} />
-                         <InfoItem icon={<MapPin size={14} />} label="Address" value={basic.address} className="col-span-2" />
-                    </div>
-                </Section>
-                <Section title="Clinical Notes">
-                     <div className="space-y-3">
-                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-xl border border-orange-100 dark:border-orange-800/30">
-                            <p className="text-xs font-bold text-orange-700 dark:text-orange-400 uppercase mb-1">Chief Complaint</p>
-                            <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{basic.chief_complaint || 'None recorded'}</p>
-                        </div>
-                        {basic.remarks && (
-                            <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
-                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Remarks</p>
-                                <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{basic.remarks}"</p>
-                            </div>
-                        )}
-                     </div>
-                </Section>
+    const StatCard = ({ label, value, colorClass, icon }: any) => (
+         <div className={`rounded-2xl p-4 border flex justify-between items-center ${colorClass}`}>
+            <div>
+                <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">{label}</p>
+                <p className="text-xl font-black mt-1">{value}</p>
             </div>
-        )}
-
-        {activeTab === 'treatment' && (
-            <div className="space-y-4 animate-fade-in">
-                <Section title="Active Plan">
-                    <div className="flex items-center justify-between mb-4">
-                         <h3 className="text-lg font-bold text-teal-700 dark:text-teal-400">{treatment.type} Plan</h3>
-                         <span className="px-3 py-1 bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300 text-xs font-bold rounded-full">
-                            {attendance.total_present}/{treatment.days} Days
-                         </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <StatBox label="Start Date" value={formatDate(treatment.start_date)} />
-                        <StatBox label="End Date" value={formatDate(treatment.end_date)} />
-                        <StatBox label="Cost/Day" value={formatCurrency(treatment.cost_per_day)} />
-                        <StatBox label="Total Cost" value={formatCurrency(treatment.total_cost)} />
-                    </div>
-                </Section>
-
-                <Section title="Last Consultation">
-                    <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
-                         <div className="flex justify-between items-center mb-2">
-                            <span className="font-semibold text-gray-900 dark:text-white text-sm">{consultation.type}</span>
-                            <span className="text-xs text-gray-500">{formatDate(consultation.date)}</span>
-                         </div>
-                         {consultation.notes ? (
-                            <div className="text-sm text-gray-600 dark:text-gray-300 italic border-l-2 border-teal-500 pl-3">
-                                "{consultation.notes}"
-                            </div>
-                         ) : <span className="text-xs text-gray-400">No notes</span>}
-                    </div>
-                </Section>
-
-                <Section title={`Attendance (${attendance.total_present})`}>
-                    <div className="grid grid-cols-4 gap-2">
-                        {attendance.history.map((att, idx) => (
-                            <div key={idx} className="bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-2 text-center">
-                                <p className="text-[10px] text-green-800 dark:text-green-300 font-bold uppercase">{new Date(att.attendance_date).toLocaleString('default', { month: 'short' })}</p>
-                                <p className="text-lg font-bold text-green-700 dark:text-green-400 leading-none">{new Date(att.attendance_date).getDate()}</p>
-                            </div>
-                        ))}
-                        {attendance.history.length === 0 && <span className="text-sm text-gray-500 col-span-4">No attendance records.</span>}
-                    </div>
-                </Section>
-            </div>
-        )}
-
-        {activeTab === 'financial' && (
-            <div className="space-y-4 animate-fade-in">
-                <div className="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <CreditCard size={100} />
-                    </div>
-                    <p className="text-gray-400 text-xs font-medium mb-1 uppercase tracking-wider">Total Due Balance</p>
-                    <p className="text-4xl font-bold mb-6">{formatCurrency(financials.due)}</p>
-                    
-                    <div className="grid grid-cols-2 gap-8 border-t border-gray-700 pt-6">
-                        <div>
-                            <p className="text-gray-400 text-xs mb-1">Total Billed</p>
-                            <p className="font-semibold text-lg">{formatCurrency(financials.total_billed)}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-gray-400 text-xs mb-1">Total Paid</p>
-                            <p className="font-semibold text-lg text-green-400">{formatCurrency(financials.paid)}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-                     <div className="flex justify-between mb-2">
-                        <span className="text-sm font-bold text-gray-800 dark:text-white">Payment Progress</span>
-                        <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{financials.percentage}%</span>
-                     </div>
-                     <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                        <div className="bg-gradient-to-r from-teal-500 to-emerald-500 h-3 rounded-full shadow-[0_0_10px_rgba(20,184,166,0.5)]" style={{ width: `${financials.percentage}%` }}></div>
-                     </div>
-                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                        {financials.due > 0 ? `Please collect ${formatCurrency(financials.due)} from patient.` : 'Payment complete.'}
-                     </p>
-                </div>
-            </div>
-        )}
-
-      </div>
-    </div>
-  );
-};
-
-// Components
-const TabButton = ({ active, onClick, label, icon }: any) => (
-    <button 
-        onClick={onClick} 
-        className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wide rounded-lg transition-all
-        ${active ? 'bg-white dark:bg-gray-700 text-teal-600 dark:text-teal-300 shadow-sm ring-1 ring-gray-200 dark:ring-gray-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
-    >
-        {icon} {label}
-    </button>
-);
-
-const Section = ({ title, children }: any) => (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-4 uppercase tracking-widest">{title}</h3>
-        <div className="space-y-4">{children}</div>
-    </div>
-);
-
-const InfoItem = ({ icon, label, value, className = '' }: any) => (
-    <div className={`flex items-start gap-3 ${className}`}>
-        <div className="mt-0.5 text-gray-400 dark:text-gray-500">{icon}</div>
-        <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-0.5">{label}</p>
-            <p className="text-sm font-medium text-gray-900 dark:text-white break-words leading-tight">{value || 'N/A'}</p>
+            {icon}
         </div>
-    </div>
-);
-
-const StatBox = ({ label, value }: any) => (
-    <div className="bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">{label}</p>
-        <p className="font-bold text-gray-900 dark:text-white text-sm">{value || '-'}</p>
-    </div>
-);
-
-const ActionButton = ({ label, icon, color }: { label: string, icon: any, color: 'purple' | 'gray' | 'teal' | 'indigo' }) => {
-    // Colors mappings could be expanded
-    const colorClasses = {
-        purple: 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800',
-        gray: 'bg-gray-50 text-gray-700 border-gray-100 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-600',
-        teal: 'bg-teal-50 text-teal-700 border-teal-100 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800',
-        indigo: 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800',
-    }[color] || 'bg-gray-50 text-gray-700';
+    );
 
     return (
-        <button 
-            onClick={() => alert('Feature coming soon!')}
-            className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border ${colorClasses} hover:brightness-95 transition-all active:scale-95`}
-        >
-            {icon}
-            <span className="text-[10px] font-bold uppercase">{label}</span>
-        </button>
+        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900 transition-colors duration-200">
+            {/* Header */}
+            <header className="px-6 py-4 pt-11 flex items-center justify-between sticky top-0 z-20 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 active:scale-95 transition-transform">
+                        <ChevronLeft size={20} />
+                    </button>
+                    <div>
+                        <h1 className="text-lg font-black text-gray-900 dark:text-white leading-tight truncate max-w-[150px]">{basic.name}</h1>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">#{basic.patient_uid || basic.patient_id}</span>
+                    </div>
+                </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-6 no-scrollbar">
+                
+                {/* Hero Profile Card */}
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-1 shadow-lg shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-teal-500 to-emerald-600"></div>
+                     <div className="relative pt-12 px-5 pb-5 flex flex-col items-center">
+                        <div className="w-24 h-24 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 shadow-md mb-3 overflow-hidden">
+                            {basic.photo ? (
+                                <img src={`${ADMIN_URL}/${basic.photo}`} alt="Profile" className="w-full h-full object-cover" />
+                            ) : ( 
+                                <div className="w-full h-full flex items-center justify-center text-3xl font-black text-gray-400 uppercase bg-gray-100 dark:bg-gray-700">
+                                    {basic.name.charAt(0)}
+                                </div>
+                            )}
+                        </div>
+                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-4 border-2 ${
+                            basic.status === 'active' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100'
+                        }`}>
+                            {basic.status}
+                        </div>
+                        <div className="flex gap-3 w-full">
+                             <a href={`tel:${basic.phone}`} className="flex-1 py-3 rounded-2xl bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors hover:bg-teal-50 hover:text-teal-600">
+                                 <Phone size={14} /> Call
+                             </a>
+                             <button className="flex-1 py-3 rounded-2xl bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors hover:bg-blue-50 hover:text-blue-600">
+                                 <Mail size={14} /> SMS
+                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex p-1 bg-gray-200/50 dark:bg-gray-800 rounded-2xl">
+                    <TabButton active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} label="Profile" icon={<User size={14} />} />
+                    <TabButton active={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')} label="Timeline" icon={<Activity size={14} />} />
+                    <TabButton active={activeTab === 'billing'} onClick={() => setActiveTab('billing')} label="Billing" icon={<Wallet size={14} />} />
+                </div>
+
+                {/* TAB CONTENT */}
+                <div className="animate-in slide-in-from-bottom-5 fade-in duration-300">
+                    
+                    {/* PROFILE TAB */}
+                    {activeTab === 'profile' && (
+                        <div className="space-y-4">
+                            <Section title="Basic Details" icon={<User size={14} />}>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <InfoItem icon={<User size={14} />} label="Full Name" value={basic.name} className="col-span-2" />
+                                    <InfoItem icon={<Clock size={14} />} label="Age" value={`${basic.age} Years`} />
+                                    <InfoItem icon={<User size={14} />} label="Gender" value={basic.gender} />
+                                    <InfoItem icon={<Phone size={14} />} label="Phone" value={basic.phone} className="col-span-2" />
+                                    <InfoItem icon={<MapPin size={14} />} label="Address" value={basic.address} className="col-span-2" />
+                                </div>
+                            </Section>
+
+                            <Section title="Medical Context" icon={<Stethoscope size={14} />}>
+                                <div className="space-y-3">
+                                    <InfoItem icon={<Stethoscope size={14} />} label="Assigned Doctor" value={basic.assigned_doctor || 'Not Assigned'} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                         <InfoItem icon={<Activity size={14} />} label="Type" value={treatment.type} />
+                                         <InfoItem icon={<AlertCircle size={14} />} label="Complaint" value={basic.chief_complaint || 'N/A'} />
+                                    </div>
+                                </div>
+                            </Section>
+                        </div>
+                    )}
+
+                    {/* TIMELINE TAB */}
+                    {activeTab === 'timeline' && (
+                        <div className="space-y-6">
+                            {/* Plan Overview */}
+                            <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+                                <div className="relative z-10">
+                                   <div className="flex justify-between items-start">
+                                       <div>
+                                           <h3 className="text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1">Active Treatment</h3>
+                                           <p className="text-2xl font-black capitalize">{treatment.type}</p>
+                                       </div>
+                                       <div className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md border border-white/10">
+                                           {treatment.days} Days Goal
+                                       </div>
+                                   </div>
+
+                                   <div className="mt-8">
+                                       <div className="flex justify-between text-xs font-bold text-indigo-100 mb-2">
+                                           <span>Progress ({progressPercent}%)</span>
+                                           <span>{attendance.total_present}/{treatment.days} Sessions</span>
+                                       </div>
+                                       <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden backdrop-blur-sm border border-white/10">
+                                           <div className="h-full bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-all duration-1000" style={{ width: `${progressPercent}%` }}></div>
+                                       </div>
+                                   </div>
+
+                                   <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-white/10">
+                                       <div>
+                                           <p className="text-indigo-200 text-[10px] uppercase font-bold">Start Date</p>
+                                           <p className="font-bold text-xs">{treatment.start_date || 'N/A'}</p>
+                                       </div>
+                                       <div className="text-right">
+                                           <p className="text-indigo-200 text-[10px] uppercase font-bold">End Date</p>
+                                           <p className="font-bold text-xs">{treatment.end_date || 'N/A'}</p>
+                                       </div>
+                                   </div>
+                                </div>
+                                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                            </div>
+
+                            {/* Session History */}
+                            <Section title="Session History" icon={<Calendar size={14} />}>
+                                <div className="space-y-0 relative border-l-2 border-gray-100 dark:border-gray-700 ml-2">
+                                    {attendance.history.slice(0, 10).map((record, i) => (
+                                        <div key={i} className="pl-6 pb-6 relative last:pb-0">
+                                            <div className="absolute -left-[5px] top-1.5 w-3 h-3 rounded-full bg-teal-500 border-2 border-white dark:border-gray-800"></div>
+                                            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-xs font-bold text-gray-900 dark:text-white">Session Completed</span>
+                                                    <span className="text-[10px] font-bold text-gray-400">{record.attendance_date}</span>
+                                                </div>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{record.remarks || 'Regular session'}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {attendance.history.length === 0 && <p className="text-sm text-gray-400 pl-6 italic">No sessions recorded.</p>}
+                                </div>
+                            </Section>
+                        </div>
+                    )}
+
+                    {/* BILLING TAB */}
+                    {activeTab === 'billing' && (
+                        <div className="space-y-4">
+                            {/* Total Due Card */}
+                             <div className="bg-gradient-to-tr from-gray-900 to-gray-800 dark:from-black dark:to-gray-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Dues</p>
+                                            <p className="text-4xl font-black mt-1 text-red-400">₹{financials.due.toLocaleString()}</p>
+                                        </div>
+                                        <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                                            <Wallet size={24} className="text-white" />
+                                        </div>
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={() => setPayModalOpen(true)}
+                                        className="w-full py-4 bg-white text-black rounded-xl font-bold uppercase tracking-wider hover:bg-gray-100 transition-colors shadow-lg active:scale-95 transform duration-200"
+                                    >
+                                        Pay Dues Now
+                                    </button>
+                                </div>
+                             </div>
+
+                             <Section title="Financial Overview" icon={<TrendingUp size={14} />}>
+                                 <div className="grid grid-cols-2 gap-3">
+                                     <StatCard 
+                                        label="Total Billed" 
+                                        value={`₹${financials.total_billed.toLocaleString()}`} 
+                                        colorClass="bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400"
+                                        icon={<FileText size={16} />}
+                                     />
+                                     <StatCard 
+                                        label="Amount Paid" 
+                                        value={`₹${financials.paid.toLocaleString()}`} 
+                                        colorClass="bg-green-50 border-green-100 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400"
+                                        icon={<CheckCircle size={16} />}
+                                     />
+                                 </div>
+                             </Section>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* PAY DUES MODAL */}
+            {isPayModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300 mb-20 sm:mb-0">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                            <h3 className="text-lg font-black text-gray-900 dark:text-white">Pay Dues</h3>
+                            <button onClick={() => setPayModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold">✕</div>
+                            </button>
+                        </div>
+                        <form onSubmit={handlePayDues} className="p-6 space-y-4">
+                             <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl text-center">
+                                 <p className="text-xs font-bold text-red-500 uppercase">Outstanding Amount</p>
+                                 <p className="text-2xl font-black text-red-600 dark:text-red-400">₹{financials.due.toLocaleString()}</p>
+                             </div>
+
+                             <div>
+                                 <label className="text-xs font-bold text-gray-500 uppercase ml-1">Amount to Pay</label>
+                                 <div className="relative mt-1">
+                                     <IndianRupee size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                     <input 
+                                        type="number" 
+                                        required
+                                        min="1"
+                                        step="0.01"
+                                        value={payAmount}
+                                        onChange={(e) => setPayAmount(e.target.value)}
+                                        className="w-full bg-gray-100 dark:bg-gray-700 pl-9 pr-4 py-3 rounded-xl font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
+                                        placeholder="0.00"
+                                     />
+                                 </div>
+                             </div>
+
+                             <div>
+                                 <label className="text-xs font-bold text-gray-500 uppercase ml-1">Payment Mode</label>
+                                 <div className="grid grid-cols-3 gap-2 mt-1">
+                                     {['Cash', 'UPI', 'Card'].map(m => (
+                                         <button 
+                                            key={m}
+                                            type="button"
+                                            onClick={() => setPayMode(m.toLowerCase())}
+                                            className={`py-2 rounded-xl text-xs font-bold uppercase border-2 transition-all
+                                                ${payMode === m.toLowerCase() 
+                                                    ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400' 
+                                                    : 'border-transparent bg-gray-100 dark:bg-gray-700 text-gray-500'}
+                                            `}
+                                         >
+                                             {m}
+                                         </button>
+                                     ))}
+                                 </div>
+                             </div>
+
+                             <button 
+                                disabled={paymentProcessing}
+                                type="submit" 
+                                className="w-full py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold uppercase tracking-wider shadow-lg shadow-teal-500/30 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+                             >
+                                 {paymentProcessing ? 'Processing...' : 'Confirm Payment'}
+                             </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 

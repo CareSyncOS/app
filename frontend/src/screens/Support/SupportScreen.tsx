@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
-  ArrowLeft, Ticket, Clock, CheckCircle, Upload, Reply, X, Activity
+  ArrowLeft, Ticket, Clock, CheckCircle, Upload, Reply, X, Activity, 
+  HelpCircle, MessageCircle, FileText, Image as ImageIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -11,6 +12,7 @@ const IssueDetailsModal = ({ issueId, onClose }: { issueId: number; onClose: () 
     const { user } = useAuthStore();
     const [details, setDetails] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -34,54 +36,69 @@ const IssueDetailsModal = ({ issueId, onClose }: { issueId: number; onClose: () 
     if (!issueId) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center shrink-0">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-gray-800 rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-white/20 scale-100 animate-in zoom-in-95 duration-200">
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm">
                     <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                           Issue Details <span className="text-gray-400 font-mono text-base">#{issueId}</span>
+                        <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                           Ticket Details <span className="text-indigo-500 font-mono text-base">#{issueId}</span>
                         </h3>
+                        {details && (
+                             <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">
+                                 Reported on {new Date(details.issue.created_at).toLocaleDateString()}
+                             </p>
+                        )}
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+                    <button onClick={onClose} className="p-2 rounded-full bg-white dark:bg-gray-700 text-gray-500 shadow-sm hover:scale-105 transition-transform">
                         <X size={20} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white/50 dark:bg-gray-900/50">
                     {loading ? (
-                        <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div></div>
+                        <div className="flex justify-center p-10"><Activity className="animate-spin text-indigo-500" size={32} /></div>
                     ) : details ? (
                         <>
                             {/* Meta Badges */}
                             <div className="flex flex-wrap gap-3">
-                                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 flex-1 min-w-[140px]">
-                                    <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Status</p>
-                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold capitalize ${
+                                {/* STATUS */}
+                                <div className="bg-white dark:bg-gray-700 rounded-2xl p-4 flex-1 min-w-[120px] shadow-sm border border-gray-100 dark:border-gray-600">
+                                    <p className="text-[10px] font-bold uppercase text-gray-400 mb-2 tracking-wider">Status</p>
+                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wide ${
                                         details.issue.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                                         details.issue.status === 'resolved' ? 'bg-emerald-100 text-emerald-700' :
                                         'bg-blue-100 text-blue-700'
                                     }`}>
+                                        {details.issue.status === 'pending' && <Clock size={12} />}
+                                        {details.issue.status === 'resolved' && <CheckCircle size={12} />}
                                         {details.issue.status.replace('_', ' ')}
                                     </span>
                                 </div>
-                                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 flex-1 min-w-[140px]">
-                                    <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Release</p>
-                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border border-gray-200 dark:border-gray-600 dark:text-white capitalize">
+                                
+                                {/* RELEASE SCHEDULE */}
+                                <div className="bg-white dark:bg-gray-700 rounded-2xl p-4 flex-1 min-w-[120px] shadow-sm border border-gray-100 dark:border-gray-600">
+                                    <p className="text-[10px] font-bold uppercase text-gray-400 mb-2 tracking-wider">Release</p>
+                                    <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-black bg-red-100 text-red-700 border border-red-200 uppercase tracking-wide">
                                         {details.issue.release_schedule?.replace('_', ' ') || 'Pending'}
                                     </span>
                                 </div>
-                                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 flex-1 min-w-[140px]">
-                                    <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Date</p>
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+
+                                {/* DATE */}
+                                <div className="bg-white dark:bg-gray-700 rounded-2xl p-4 flex-1 min-w-[120px] shadow-sm border border-gray-100 dark:border-gray-600">
+                                    <p className="text-[10px] font-bold uppercase text-gray-400 mb-2 tracking-wider">Date</p>
+                                    <p className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                                        <Clock size={14} className="text-gray-400" />
                                         {new Date(details.issue.created_at).toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>
 
                             {/* Description */}
-                            <div>
-                                <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-2">Description</h4>
-                                <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+                            <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <FileText size={14} /> Description
+                                </h4>
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
                                     {details.issue.description}
                                 </div>
                             </div>
@@ -89,24 +106,20 @@ const IssueDetailsModal = ({ issueId, onClose }: { issueId: number; onClose: () 
                             {/* Attachments */}
                             {details.attachments && details.attachments.length > 0 && (
                                 <div>
-                                    <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-2">Attachments</h4>
-                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2 px-1">
+                                        <ImageIcon size={14} /> Attachments
+                                    </h4>
+                                    <div className="flex gap-3 overflow-x-auto pb-4 px-1">
                                         {details.attachments.map((path: string, i: number) => {
-                                            // Handle relative/absolute URL
-                                            // Assuming server returns 'uploads/issues/...' and base url is needed?
-                                            // Or server returns whatever is in DB.
-                                            // Usually in local dev we might need base.
-                                            // I'll try straightforward relative if it's served from root, or construct it.
-                                            // For safety, I'll log/check but assume simple img tag.
-                                            // If API is at /server/api, and image at /uploads, then ../../uploads works if this was html.
-                                            // But this is React, separate port usually.
-                                            // I'll assume 'https://prospine.in/' + path or similar if PROD, or localhost/uploads logic.
-                                            // I'll blindly use a helper.
-                                            const imgUrl = path.startsWith('http') ? path : `https://prospine.in/admin/${path}`; // Fallback assumption
-                                            // Ideally, I should ask user about base URL for images. But for now best effort.
-                                            // Actually I'll use Import Meta Env for base image url if I had one. I'll stick to 'https://prospine.in/' for simplicity as default
+                                            const imgUrl = path.startsWith('http') ? path : `https://prospine.in/admin/${path}`;
                                             return (
-                                              <img key={i} src={imgUrl} className="h-24 w-auto rounded-lg border border-gray-200 object-cover" alt="Attachment" />
+                                              <img 
+                                                key={i} 
+                                                src={imgUrl} 
+                                                className="h-32 w-auto rounded-2xl border-2 border-white dark:border-gray-700 shadow-md object-cover hover:scale-105 transition-transform cursor-pointer" 
+                                                alt={`Attachment ${i}`}
+                                                onClick={() => setSelectedImage(imgUrl)}
+                                              />
                                             );
                                         })}
                                     </div>
@@ -115,21 +128,53 @@ const IssueDetailsModal = ({ issueId, onClose }: { issueId: number; onClose: () 
 
                              {/* Admin Response */}
                              {details.issue.admin_response && (
-                                <div>
-                                    <h4 className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                        <Reply size={12}/> Admin Response
+                                <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 p-5 rounded-3xl border border-teal-100 dark:border-teal-800/30">
+                                    <h4 className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <Reply size={14}/> Admin Response
                                     </h4>
-                                    <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-xl border border-teal-100 dark:border-teal-800/30 text-sm text-gray-800 dark:text-gray-200">
+                                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200 bg-white/60 dark:bg-gray-800/60 p-4 rounded-2xl border border-white/50 backdrop-blur-sm">
                                         {details.issue.admin_response}
+                                    </div>
+                                    <div className="mt-3 flex justify-end">
+                                        <span className="text-[10px] font-bold text-teal-600 uppercase tracking-wider bg-teal-100 dark:bg-teal-900/50 px-2 py-1 rounded-lg">
+                                            {details.issue.status === 'resolved' ? 'Resolved & Closed' : 'Update'}
+                                        </span>
                                     </div>
                                 </div>
                             )}
                         </>
                     ) : (
-                        <p className="text-center text-gray-500">Failed to load details.</p>
+                        <div className="text-center py-10 opacity-50">
+                            <HelpCircle size={48} className="mx-auto mb-3 text-gray-300" />
+                            <p className="text-sm font-bold text-gray-400">Failed to load details.</p>
+                        </div>
                     )}
                 </div>
             </div>
+
+            {/* Image Viewer Overlay */}
+            {selectedImage && (
+                <div 
+                    className="fixed inset-0 z-[1100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage(null);
+                    }}
+                >
+                    <button 
+                        className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all hover:rotate-90"
+                        onClick={() => setSelectedImage(null)}
+                    >
+                        <X size={28} />
+                    </button>
+                    <img 
+                        src={selectedImage} 
+                        alt="Full view" 
+                        className="max-w-full max-h-[90vh] object-contain rounded-lg animate-in zoom-in-50 duration-300 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()} 
+                    />
+                </div>
+            )}
         </div>
     );
 };
@@ -197,7 +242,6 @@ export const SupportScreen = () => {
             const json = await res.json();
 
             if (json.status === 'success') {
-                alert("Ticket submitted successfully!");
                 setDesc('');
                 setFiles(null);
                 fetchSupport();
@@ -213,141 +257,154 @@ export const SupportScreen = () => {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900">
              {/* Header */}
-             <div className="bg-white dark:bg-gray-800 px-4 py-3 pt-[var(--safe-area-inset-top,32px)] mt-0 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3 sticky top-0 z-10 shrink-0 shadow-sm">
-
-                <button onClick={() => navigate('/')} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
-                </button>
-                <div className="flex-1">
-                    <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Support Center</h1>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Track issues & feedback</p>
+             <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl px-5 py-4 pt-[var(--safe-area-inset-top,32px)] border-b border-gray-100 dark:border-gray-800 sticky top-0 z-20">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('/')} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        <ArrowLeft size={20} className="text-gray-700 dark:text-gray-200" />
+                    </button>
+                    <div>
+                         <h1 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-widest">Support Center</h1>
+                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Help & Documentation</p>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 pb-20 pt-4 space-y-6">
+            <div className="flex-1 overflow-y-auto p-5 pb-32 space-y-6">
                 
-                {/* Stats */}
+                {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                         <p className="text-[10px] font-bold text-gray-400 uppercase">Total</p>
-                         <div className="flex items-center justify-between mt-1">
-                             <span className="text-xl font-black text-gray-900 dark:text-white">{stats.total}</span>
-                             <div className="text-indigo-500 bg-indigo-50 p-1.5 rounded-full"><Ticket size={14} /></div>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                         <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider relative z-10">Total Tickets</p>
+                         <div className="flex items-end justify-between mt-2 relative z-10">
+                             <span className="text-2xl font-black text-gray-900 dark:text-white">{stats.total}</span>
+                             <div className="text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-xl"><Ticket size={18} /></div>
                          </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                         <p className="text-[10px] font-bold text-gray-400 uppercase">In Progress</p>
-                         <div className="flex items-center justify-between mt-1">
-                             <span className="text-xl font-black text-blue-500">{stats.in_progress}</span>
-                             <div className="text-blue-500 bg-blue-50 p-1.5 rounded-full"><Activity size={14} /></div>
-                         </div>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                         <p className="text-[10px] font-bold text-gray-400 uppercase">Pending</p>
-                         <div className="flex items-center justify-between mt-1">
-                             <span className="text-xl font-black text-amber-500">{stats.pending}</span>
-                             <div className="text-amber-500 bg-amber-50 p-1.5 rounded-full"><Clock size={14} /></div>
-                         </div>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                         <p className="text-[10px] font-bold text-gray-400 uppercase">Completed</p>
-                         <div className="flex items-center justify-between mt-1">
-                             <span className="text-xl font-black text-emerald-500">{stats.completed}</span>
-                             <div className="text-emerald-500 bg-emerald-50 p-1.5 rounded-full"><CheckCircle size={14} /></div>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                         <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider relative z-10">In Progress</p>
+                         <div className="flex items-end justify-between mt-2 relative z-10">
+                             <span className="text-2xl font-black text-blue-500">{stats.in_progress}</span>
+                             <div className="text-blue-500 bg-blue-50 dark:bg-blue-900/20 p-2 rounded-xl"><Activity size={18} /></div>
                          </div>
                     </div>
                 </div>
-
-                {/* Banner */}
-                {/* <div className="bg-gradient-to-r from-teal-500 to-blue-500 p-4 rounded-xl shadow-lg text-white flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                         <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-                             <Sparkles size={18} />
-                         </div>
-                         <div>
-                             <h3 className="text-sm font-bold">What's New</h3>
-                             <p className="text-[10px] opacity-90">Check latest updates</p>
-                         </div>
-                    </div>
-                    <ArrowRight size={16} />
-                </div> */}
 
                 {/* New Ticket Form */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
-                    <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">New Ticket</h2>
-                    <form onSubmit={handleSubmit} className="space-y-3">
-                        <textarea 
-                            value={desc}
-                            onChange={(e) => setDesc(e.target.value)}
-                            className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-                            placeholder="Describe your issue..."
-                            rows={3}
-                            required
-                        />
-                        <div className="flex gap-3">
-                            <div className="flex-1 relative">
-                                <input 
-                                    type="file" 
-                                    multiple 
-                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                                    onChange={(e) => setFiles(e.target.files)}
-                                />
-                                <div className="h-10 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center gap-2 text-gray-500 text-xs bg-gray-50 dark:bg-gray-900/50">
-                                    <Upload size={14} />
-                                    <span>{files && files.length > 0 ? `${files.length} files` : 'Attach Images'}</span>
-                                </div>
+                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2rem] p-6 shadow-xl shadow-indigo-500/20 text-white relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 blur-3xl rounded-full"></div>
+                    
+                    <div className="relative z-10 space-y-4">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
+                                <HelpCircle size={20} className="text-white" />
                             </div>
-                            <button 
-                                type="submit" 
-                                disabled={submitting}
-                                className="flex-1 bg-indigo-600 text-white h-10 rounded-lg text-xs font-bold shadow-md hover:bg-indigo-700 disabled:opacity-70"
-                            >
-                                {submitting ? 'Sending...' : 'Submit Ticket'}
-                            </button>
+                            <div>
+                                <h2 className="text-lg font-black tracking-tight">Need Help?</h2>
+                                <p className="text-xs text-indigo-100 font-medium">Create a new support ticket</p>
+                            </div>
                         </div>
-                    </form>
+
+                        <form onSubmit={handleSubmit} className="space-y-3">
+                            <textarea 
+                                value={desc}
+                                onChange={(e) => setDesc(e.target.value)}
+                                className="w-full p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-sm font-medium text-white placeholder:text-indigo-200 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all resize-none shadow-inner"
+                                placeholder="Describe your issue or feature request..."
+                                rows={3}
+                                required
+                            />
+                            <div className="flex gap-3">
+                                <div className="flex-1 relative group">
+                                    <input 
+                                        type="file" 
+                                        multiple 
+                                        accept="image/*"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                        onChange={(e) => setFiles(e.target.files)}
+                                    />
+                                    <div className="h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center gap-2 text-xs font-bold text-white group-hover:bg-white/20 transition-all">
+                                        <Upload size={16} />
+                                        <span>{files && files.length > 0 ? `${files.length} attached` : 'Attach'}</span>
+                                    </div>
+                                </div>
+                                <button 
+                                    type="submit" 
+                                    disabled={submitting}
+                                    className="flex-1 h-12 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg hover:bg-indigo-50 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    {submitting ? <Activity className="animate-spin" size={16} /> : 'Submit'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
-                {/* Recent Tickets */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-                        <h2 className="text-sm font-bold text-gray-900 dark:text-white">Recent Tickets</h2>
-                    </div>
-                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {/* Recent Tickets List */}
+                <div>
+                     <div className="flex items-center justify-between px-2 mb-4">
+                         <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">Recent Tickets</h3>
+                         <span className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg text-gray-500">{issues.length} Items</span>
+                     </div>
+                     
+                     <div className="space-y-4">
                         {loading ? (
-                             <div className="p-6 text-center text-xs text-gray-500">Loading tickets...</div>
+                             <div className="text-center py-8 text-xs font-bold text-gray-300">Loading...</div>
                         ) : issues.length === 0 ? (
-                             <div className="p-6 text-center text-xs text-gray-500">No tickets found.</div>
+                             <div className="text-center py-10 opacity-50">
+                                 <MessageCircle size={32} className="mx-auto mb-2 text-gray-300" />
+                                 <p className="text-xs font-bold text-gray-400">No tickets found</p>
+                             </div>
                         ) : (
                             issues.map((issue) => (
                                 <div 
                                     key={issue.issue_id} 
                                     onClick={() => setSelectedIssueId(issue.issue_id)}
-                                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
+                                    className="bg-white dark:bg-gray-800 p-5 rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col gap-3 active:scale-[0.98] transition-all"
                                 >
-                                    <div className="flex justify-between items-start mb-1">
-                                         <div className="flex items-center gap-2">
-                                             <span className="text-[10px] font-mono text-gray-400">#{issue.issue_id}</span>
-                                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold capitalize ${
-                                                 issue.status === 'pending' ? 'bg-amber-50 text-amber-600' :
-                                                 issue.status === 'resolved' ? 'bg-emerald-50 text-emerald-600' :
-                                                 'bg-blue-50 text-blue-600'
-                                             }`}>{issue.status.replace('_', ' ')}</span>
-                                             {issue.admin_response && (
-                                                 <span className="flex items-center gap-0.5 text-[10px] text-indigo-600 font-bold">
-                                                     <Reply size={10} />
-                                                 </span>
-                                             )}
+                                    <div className="flex justify-between items-start">
+                                         <div className="flex items-center gap-3">
+                                             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg ${
+                                                 issue.status === 'resolved' ? 'bg-emerald-500 shadow-emerald-500/30' : 
+                                                 issue.status === 'pending' ? 'bg-amber-500 shadow-amber-500/30' : 'bg-blue-500 shadow-blue-500/30'
+                                             }`}>
+                                                 {issue.status === 'resolved' ? <CheckCircle size={20} /> : <Ticket size={20} />}
+                                             </div>
+                                             <div>
+                                                 <div className="flex items-center gap-2">
+                                                     <span className="text-[10px] font-black uppercase text-gray-400">#{issue.issue_id}</span>
+                                                     {issue.admin_response && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>}
+                                                 </div>
+                                                 <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight mt-0.5 line-clamp-1">{issue.description}</h4>
+                                             </div>
                                          </div>
-                                         <span className="text-[10px] text-gray-400">{new Date(issue.created_at).toLocaleDateString()}</span>
+                                         <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
+                                              issue.status === 'resolved' ? 'bg-emerald-50 text-emerald-600' : 
+                                              issue.status === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
+                                         }`}>
+                                             {issue.status.replace('_', ' ')}
+                                         </span>
                                     </div>
-                                    <h3 className="text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-1">{issue.description}</h3>
+                                    
+                                    <div className="flex justify-between items-center border-t border-gray-50 dark:border-gray-700/50 pt-3 mt-1">
+                                        <div className="flex items-center gap-1.5 text-gray-400">
+                                            <Clock size={12} />
+                                            <span className="text-[10px] font-bold">{new Date(issue.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                        {issue.admin_response && (
+                                            <span className="flex items-center gap-1 text-[10px] font-black text-indigo-500 uppercase">
+                                                <Reply size={12} /> Response
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         )}
-                    </div>
+                     </div>
                 </div>
             </div>
 

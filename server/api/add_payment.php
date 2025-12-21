@@ -50,7 +50,23 @@ try {
     $amount = (float)($input['amount'] ?? 0);
     $mode = trim((string)($input['mode'] ?? ''));
     $remarks = trim((string)($input['remarks'] ?? ''));
-    $employeeId = (int)($input['employee_id'] ?? $_SESSION['employee_id'] ?? 1); // Fallback to 1 (Admin)
+    $employeeId = (int)($input['employee_id'] ?? $_SESSION['employee_id'] ?? 0); 
+    
+    // STRICT BRANCH ISOLATION - Verify Employee
+    $requestingBranchId = 0;
+    if ($employeeId) {
+        $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+        $stmtB->execute([$employeeId]);
+        $val = $stmtB->fetchColumn();
+        if ($val) $requestingBranchId = $val;
+    }
+    if (!$requestingBranchId && isset($_SESSION['branch_id'])) $requestingBranchId = $_SESSION['branch_id'];
+    
+    if (!$requestingBranchId) {
+        http_response_code(401);
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized: Valid Employee ID/Branch is required.']);
+        exit;
+    }
 
     if ($patientId <= 0 || $amount <= 0 || empty($mode)) {
         http_response_code(400);

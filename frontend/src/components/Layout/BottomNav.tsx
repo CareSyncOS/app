@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, CalendarDays, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarDays, Menu, MessageCircle } from 'lucide-react';
 
 const BottomNav: React.FC = () => {
   return (
@@ -16,6 +16,18 @@ const BottomNav: React.FC = () => {
         >
           <LayoutDashboard size={24} strokeWidth={2} />
           <span className="text-[10px] font-medium">Home</span>
+        </NavLink>
+
+        <NavLink
+          to="/chat"
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+              isActive ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            }`
+          }
+        >
+          <MessageCircle size={24} strokeWidth={2} />
+          <span className="text-[10px] font-medium">Chat</span>
         </NavLink>
 
         <NavLink

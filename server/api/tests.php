@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+session_start();
 
 // ----------------------------------------------------------------------
 // API: List Tests
@@ -19,7 +20,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once '../../common/db.php'; // Adjust path if needed
 
 try {
-    $branchId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : 1;
+    // STRICT BRANCH ISOLATION
+$employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
+$branchId = 0;
+if ($employeeId) {
+    try {
+        $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+        $stmtB->execute([$employeeId]);
+        $val = $stmtB->fetchColumn();
+        if ($val) $branchId = $val;
+    } catch(Exception $e){}
+}
+if (!$branchId && isset($_SESSION['branch_id'])) $branchId = $_SESSION['branch_id'];
+
+if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+    http_response_code(401);
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized: Branch ID required from valid Employee.']);
+    exit;
+}
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
     $statusFilter = isset($_GET['test_status']) ? trim($_GET['test_status']) : '';
     $paymentFilter = isset($_GET['payment_status']) ? trim($_GET['payment_status']) : '';

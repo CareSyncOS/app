@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle2, Star, Rocket, User, Grid } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Sparkles, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const AboutScreen = () => {
     const navigate = useNavigate();
     const [data, setData] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'features' | 'roadmap'>('features');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -37,128 +36,93 @@ export const AboutScreen = () => {
     if (!data) return null;
 
     return (
-        <div className="flex flex-col h-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
             {/* Header */}
-            <div className="px-4 py-3 pt-[var(--safe-area-inset-top,32px)] mt-0 flex items-center gap-3 sticky top-0 z-10 shrink-0">
-
-                <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-white/50 dark:hover:bg-gray-800/50 backdrop-blur-sm transition-colors text-gray-700 dark:text-gray-200">
+            <div className="px-4 py-3 pt-[var(--safe-area-inset-top,32px)] mt-0 flex items-center gap-3 sticky top-0 z-10 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-md">
+                <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-200">
                     <ArrowLeft size={20} />
                 </button>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Updates & Features</h1>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-8 pb-20">
+            <div className="flex-1 overflow-y-auto px-4 pb-12 space-y-6">
                 
-                {/* Single Main Card */}
-                <div className="mx-auto w-full max-w-sm bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/20 dark:border-gray-700 overflow-hidden">
-                    
-                    {/* Card Header */}
-                    <div className="relative pt-8 pb-6 px-6 text-center border-b border-gray-100 dark:border-gray-700/50">
-                        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-indigo-500/10 to-transparent -z-10"></div>
+                {/* 1. LATEST RELEASE CARD (Hero) */}
+                {data.releases && data.releases[0] && (
+                    <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 shadow-xl shadow-indigo-500/30 text-white relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
                         
-                        <div className="w-20 h-20 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg transform -rotate-6 mb-4 ring-4 ring-white dark:ring-gray-800">
-                            <Star className="text-white" size={40} fill="currentColor" />
-                        </div>
-                        
-                        <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">ProSpine</h1>
-                        
-                        <div className="flex items-center justify-center gap-2 mt-2">
-                             <div className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-full border border-indigo-100 dark:border-indigo-800/50">
-                                 <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">v{data.current.version}</p>
-                             </div>
-                        </div>
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+                                    <span className="text-xs font-bold tracking-wider uppercase flex items-center gap-1.5">
+                                        <Sparkles size={12} className="text-yellow-300" />
+                                        Latest Update
+                                    </span>
+                                </div>
+                                <span className="text-xs font-medium text-indigo-100 bg-black/20 px-2 py-1 rounded-lg">
+                                    {data.releases[0].date}
+                                </span>
+                            </div>
 
-                        <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
-                            <User size={12} />
-                            <span>Developed by <span className="text-gray-600 dark:text-gray-300 font-bold">{data.current.developer}</span></span>
+                            <h2 className="text-3xl font-black mb-1">v{data.releases[0].version}</h2>
+                            <p className="text-indigo-100 text-sm font-medium mb-6 leading-relaxed opacity-90">
+                                {data.releases[0].description}
+                            </p>
+
+                            <div className="bg-black/20 rounded-2xl p-4 backdrop-blur-sm border border-white/10 space-y-3">
+                                {data.releases[0].features.map((feat: any, idx: number) => (
+                                    <div key={idx} className="flex items-start gap-3">
+                                        <div className="p-1 rounded-full bg-teal-400/20 text-teal-300 mt-0.5 shrink-0">
+                                            <CheckCircle2 size={12} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-white leading-tight">{feat.title}</p>
+                                            <p className="text-[10px] text-indigo-200 leading-tight mt-0.5">{feat.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
+                )}
 
-                    {/* Tabs */}
-                    <div className="p-2 bg-gray-50/50 dark:bg-gray-900/50 m-4 rounded-xl flex gap-1 relative">
-                        <button 
-                            onClick={() => setActiveTab('features')}
-                            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
-                                activeTab === 'features' 
-                                ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-white' 
-                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                            }`}
-                        >
-                            <Grid size={14} /> My Features
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('roadmap')}
-                            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
-                                activeTab === 'roadmap' 
-                                ? 'bg-white dark:bg-gray-700 shadow-sm text-pink-500 dark:text-white' 
-                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                            }`}
-                        >
-                            <Rocket size={14} /> What's Next
-                        </button>
-                    </div>
-
-                    {/* Content Body */}
-                    <div className="px-6 pb-8 min-h-[300px]">
-                        {activeTab === 'features' ? (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                <p className="text-xs text-gray-500 text-center mb-4 leading-relaxed px-4">
-                                    {data.current.description}
-                                </p>
-                                <div className="space-y-3">
-                                    {data.current.features.map((item: any, idx: number) => (
-                                        <div key={idx} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
-                                            <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-500 group-hover:scale-110 transition-transform">
-                                                <CheckCircle2 size={14} />
+                {/* 3. PREVIOUS RELEASES (History) */}
+                {data.releases && data.releases.length > 1 && (
+                    <div className="space-y-4">
+                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-2">Previous Updates</h3>
+                        {data.releases.slice(1).map((release: any, idx: number) => (
+                            <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 opacity-75 hover:opacity-100 transition-opacity">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-500">
+                                            <History size={14} />
+                                        </div>
+                                        <span className="font-bold text-gray-900 dark:text-white">v{release.version}</span>
+                                    </div>
+                                    <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-500">{release.date}</span>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{release.description}</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {release.features.map((f: any, i: number) => (
+                                        <div key={i} className="flex flex-col">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-200">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                                                <span>{f.title}</span>
                                             </div>
-                                            <div>
-                                                <h4 className="text-xs font-bold text-gray-800 dark:text-gray-200">{item.title}</h4>
-                                                <p className="text-[10px] text-gray-400 mt-0.5">{item.desc}</p>
-                                            </div>
+                                            <span className="text-[10px] text-gray-500 dark:text-gray-400 pl-3.5 leading-tight mt-0.5">{f.desc}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        ) : (
-                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-4 rounded-xl text-white shadow-lg shadow-pink-500/20">
-                                     <div className="flex justify-between items-start">
-                                         <div>
-                                             <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Coming Soon</p>
-                                             <h3 className="text-lg font-black mt-1">{data.upcoming.version}</h3>
-                                         </div>
-                                         <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                                             <Rocket size={16} className="text-white" />
-                                         </div>
-                                     </div>
-                                     <p className="text-xs mt-3 font-medium opacity-90">{data.upcoming.headline}</p>
-                                     <p className="text-[10px] mt-1 opacity-70">ETA: {data.upcoming.release_date}</p>
-                                </div>
-
-                                <div>
-                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Planned Updates</h4>
-                                    <div className="space-y-4 pl-2 border-l-2 border-dashed border-gray-100 dark:border-gray-700">
-                                        {data.upcoming.features.map((feature: string, idx: number) => (
-                                            <div key={idx} className="relative pl-6">
-                                                <div className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-white dark:bg-gray-800 border-2 border-pink-400"></div>
-                                                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{feature}</p>
-                                            </div>
-                                        ))}
-                                        <div className="relative pl-6 opacity-50">
-                                            <div className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-gray-200 dark:bg-gray-700"></div>
-                                            <p className="text-[10px] italic text-gray-400">More to come...</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        ))}
                     </div>
+                )}
 
-                    {/* Footer */}
-                    <div className="py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700 text-center">
-                         <p className="text-[10px] text-gray-400 font-medium">© 2025 ProSpine</p>
-                    </div>
+                <div className="text-center py-8">
+                     <p className="text-[10px] text-gray-400">App Version: {data.releases[0].version} (Build 2025.12.21)</p>
+                     <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-1">© 2025 ProSpine</p>
                 </div>
-
             </div>
         </div>
     );

@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+session_start();
 
 // ----------------------------------------------------------------------
 // API: Get Detailed Billing Info (Replica of get_billing_details.php)
@@ -47,6 +48,26 @@ try {
         echo json_encode(['status' => 'error', 'message' => 'Invalid Patient ID']);
         exit();
     }
+    
+    // STRICT BRANCH ISOLATION
+    $employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
+    $branchId = 0;
+    if ($employeeId) {
+        try {
+            $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+            $stmtB->execute([$employeeId]);
+            $val = $stmtB->fetchColumn();
+            if ($val) $branchId = $val;
+        } catch(Exception $e){}
+    }
+    if (!$branchId && isset($_SESSION['branch_id'])) $branchId = $_SESSION['branch_id'];
+
+    if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+        http_response_code(401);
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized: Branch ID mismatch or missing.']);
+        exit;
+    }
 
     // Query 1: Info & Totals
     $stmt = $pdo->prepare("
@@ -74,9 +95,9 @@ try {
         FROM patients p
         LEFT JOIN registration r ON p.registration_id = r.registration_id
         LEFT JOIN patient_master pm ON r.master_patient_id = pm.master_patient_id
-        WHERE p.patient_id = :patient_id
+        WHERE p.patient_id = :patient_id AND p.branch_id = :branch_id
     ");
-    $stmt->execute(['patient_id' => $patientId]);
+    $stmt->execute(['patient_id' => $patientId, 'branch_id' => $branchId]);
     $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$data) {

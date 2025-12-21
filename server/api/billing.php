@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+session_start();
 
 // ----------------------------------------------------------------------
 // API: List Patient Billing Overview
@@ -40,13 +41,27 @@ if (!$db_loaded) {
 }
 
 try {
-    $branchId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : null;
-    $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-    $statusFilter = isset($_GET['status']) ? trim($_GET['status']) : '';
+// STRICT BRANCH ISOLATION
+$employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
+$branchId = 0;
+if ($employeeId) {
+    try {
+        $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+        $stmtB->execute([$employeeId]);
+        $val = $stmtB->fetchColumn();
+        if ($val) $branchId = $val;
+    } catch(Exception $e){}
+}
+if (!$branchId && isset($_SESSION['branch_id'])) $branchId = $_SESSION['branch_id'];
 
-    if (!$branchId) {
-        $branchId = 1; // Default fallback if not provided
-    }
+if (!$branchId && isset($_GET["branch_id"])) { $branchId = (int)$_GET["branch_id"]; }
+if (!$branchId) {
+    http_response_code(401);
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized: Branch ID required from valid Employee.']);
+    exit;
+}
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$statusFilter = isset($_GET['status']) ? trim($_GET['status']) : '';
 
     // Pagination
     $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
